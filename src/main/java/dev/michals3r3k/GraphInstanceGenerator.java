@@ -9,8 +9,8 @@ public class GraphInstanceGenerator
 {
     private static final Random ran = new Random();
 
-    private int quantity;
-    private int limit;
+    private final int quantity;
+    private final int limit;
 
     public GraphInstanceGenerator(int quantity, int limit)
     {
@@ -23,9 +23,9 @@ public class GraphInstanceGenerator
         return new Graph(quantity, getGeneratedNodes());
     }
 
-    public List<Node> getGeneratedNodes()
+    private List<Node> getGeneratedNodes()
     {
-        List<Node> nodes = new ArrayList<>();
+        final List<Node> nodes = new ArrayList<>();
         IntStream.range(1, quantity)
             .mapToObj(Integer::valueOf)
             .map(id -> getGeneratedNode(id, nodes))
@@ -33,7 +33,7 @@ public class GraphInstanceGenerator
         return nodes;
     }
 
-    private Node getGeneratedNode(final Integer id, List<Node> nodes)
+    private Node getGeneratedNode(final Integer id, final List<Node> nodes)
     {
         while(true)
         {
@@ -45,9 +45,9 @@ public class GraphInstanceGenerator
         }
     }
 
-    Node generateNode(int id)
+    private Node generateNode(final int id)
     {
-        return new Node(ran.nextInt(this.limit), ran.nextInt(this.limit), id);
+        return new Node(id, ran.nextInt(this.limit), ran.nextInt(this.limit));
     }
 
 }
