@@ -26,7 +26,7 @@ public class GraphInstanceGenerator
     private List<Node> getGeneratedNodes()
     {
         final List<Node> nodes = new ArrayList<>();
-        IntStream.range(1, quantity)
+        IntStream.range(1, quantity + 1)
             .mapToObj(Integer::valueOf)
             .map(id -> getGeneratedNode(id, nodes))
             .forEach(nodes::add);

@@ -10,7 +10,11 @@ public class Main
 {
     public static void main(String[] args) throws FileNotFoundException
     {
-        GraphReader graphReader = new GraphReader();
+        Graph graph1 = new GraphInstanceGenerator(12, 1000).generate();
+        GraphFileWriter fw = new GraphFileWriter("test.txt");
+        fw.write(graph1);
+
+        GraphReader graphReader = new GraphReader("test.txt");
         Graph graph = graphReader.getGraph();
         printNodes(graph);
         printEdges(graphReader.getGraphDistanceArray());
@@ -55,7 +59,7 @@ public class Main
     }
 
     private static Node getNextNotVisitedNode(final Graph graph,
-                                              final List<Node> visited, Node currentNode)
+        final List<Node> visited, Node currentNode)
     {
         return graph.getNeighbours(currentNode).stream()
             .filter(Predicate.not(visited::contains))

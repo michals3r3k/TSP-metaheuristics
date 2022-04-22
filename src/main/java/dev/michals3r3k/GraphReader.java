@@ -26,9 +26,9 @@ public class GraphReader
         return new Graph(nodeQuantity, nodes);
     }
 
-    GraphReader() throws FileNotFoundException
+    GraphReader(String filename) throws FileNotFoundException
     {
-        this.graph = readGraph("dane.txt");
+        this.graph = readGraph(filename);
     }
 
     public Graph getGraph()
