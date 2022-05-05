@@ -37,7 +37,7 @@ public class GraphInstanceGenerator
     {
         while(true)
         {
-            Node node = generateNode(id);
+            final Node node = generateNode(id);
             if(!nodes.contains(node))
             {
                 return node;

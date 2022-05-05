@@ -2,6 +2,7 @@ package dev.michals3r3k;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -10,18 +11,25 @@ public class Main
 {
     public static void main(String[] args) throws FileNotFoundException
     {
-        Graph graph1 = new GraphInstanceGenerator(12, 1000).generate();
-        GraphFileWriter fw = new GraphFileWriter("test.txt");
-        fw.write(graph1);
+        List<String> filenames = Arrays.asList("berlin52.txt", "bier127.txt", "tsp250.txt", "tsp500.txt", "tsp1000.txt");
+        for(String filename : filenames)
+        {
+            printDistanceAndRoute(filename);
+        }
+    }
 
-        GraphReader graphReader = new GraphReader("test.txt");
-        Graph graph = graphReader.getGraph();
-        printNodes(graph);
-        printEdges(graphReader.getGraphDistanceArray());
+    public static void printDistanceAndRoute(final String filename) throws FileNotFoundException
+    {
+        Graph graph = new GraphReader(filename).getGraph();
+        TravellingSalesman travellingSalesman = new TravellingSalesman(graph);
 
-        List<Node> visited = getGreedyTspRoute(graph);
+        List<Node> route = travellingSalesman.getGreedyTspRoute(graph.getNodes().get(0));
+        double routeDistance = travellingSalesman.getRouteDistance();
 
-        printPath(visited);
+        System.out.println(filename);
+        printPath(route);
+        System.out.println("route distance: " + routeDistance);
+        System.out.println();
     }
 
     private static List<Node> getGreedyTspRoute(final Graph graph)
