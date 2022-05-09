@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="TSP" />
+        <module name="TSP-metaheuristics" />
       </profile>
     </annotationProcessing>
   </component>

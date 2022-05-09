@@ -11,7 +11,7 @@ public class Main
 {
     public static void main(String[] args) throws FileNotFoundException
     {
-        List<String> filenames = Arrays.asList("berlin52.txt", "bier127.txt", "tsp250.txt", "tsp500.txt", "tsp1000.txt");
+        List<String> filenames = Arrays.asList("berlin52.txt", "tsp250.txt", "bier127.txt", "tsp500.txt", "tsp1000.txt");
         for(String filename : filenames)
         {
             printDistanceAndRoute(filename);
