@@ -25,7 +25,7 @@ public class Main
             AntAlgorithm antAlgorithm = new AntAlgorithm(graph, 40.0, 30, 30.0);
             List<RouteWithDistance> routeWithDistances = antAlgorithm.runAlgorithm().stream()
                 .sorted(Comparator.comparing(RouteWithDistance::getDistance))
-                .collect(Collectors.toList());;
+                .collect(Collectors.toList());
             for(RouteWithDistance route : routeWithDistances)
             {
                 String routeStr = route.getRoute().stream().map(Node::getId).map(

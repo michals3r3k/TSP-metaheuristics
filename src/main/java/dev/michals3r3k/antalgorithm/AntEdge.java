@@ -35,6 +35,11 @@ public class AntEdge
         return edge.getDistance();
     }
 
+    Graph.Edge getEdge()
+    {
+        return edge;
+    }
+
     public void evaporate()
     {
         this.pheromone *= (100 - this.evaporation) / 100;

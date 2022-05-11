@@ -6,10 +6,8 @@ import com.google.common.collect.Range;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Random;
 
 public class Ant
 {
@@ -18,7 +16,7 @@ public class Ant
     private final Graph graph;
     private final ListMultimap<Node, AntEdge> edgeMap;
 
-    private final List<Node> visited;
+    private final Set<Node> visited;
     private final List<AntEdge> visitedEdges;
     private final double pheromone;
     private boolean finishedTrace;
@@ -30,7 +28,7 @@ public class Ant
     {
         this.graph = graph;
         this.edgeMap = edgeMap;
-        this.visited = new ArrayList<>();
+        this.visited = new HashSet<>();
         this.visitedEdges = new ArrayList<>();
         this.pheromone = pheromone;
         this.finishedTrace = false;
@@ -38,12 +36,9 @@ public class Ant
 
     public RouteWithDistance getRouteWithDistance()
     {
-        return new RouteWithDistance(getRoute(), getDistance());
-    }
-
-    public List<Node> getRoute()
-    {
-        return visited;
+        final List<Graph.Edge> edges = visitedEdges.stream().map(
+            AntEdge::getEdge).collect(Collectors.toList());
+        return new RouteWithDistance(getDistance(), edges);
     }
 
     public double getDistance()
@@ -60,7 +55,8 @@ public class Ant
 
     public void run()
     {
-        Node currentNode = getFirstNode();
+        final Node firstNode = getFirstNode();
+        Node currentNode = firstNode;
         while(graph.getNodeQuantity() != visited.size())
         {
             final AntEdge edge = pickNextEdge(currentNode);
@@ -69,6 +65,7 @@ public class Ant
             visitedEdges.add(edge);
             currentNode = nextNode;
         }
+        visitedEdges.add(getEdge(currentNode, firstNode));
         updateEdges();
         this.finishedTrace = true;
     }
@@ -102,6 +99,15 @@ public class Ant
         return edgeMap.get(currentNode).stream()
             .filter(edge -> !visited.contains(edge.getEndNode()))
             .collect(Collectors.toList());
+    }
+
+    private AntEdge getEdge(final Node staringNode, final Node endingNode)
+    {
+        return edgeMap.get(staringNode).stream()
+            .filter(edge -> endingNode.equals(edge.getEndNode()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Cannot find edge from "
+                + staringNode.getId() + "to" + endingNode.getId()));
     }
 
     private static double getPick(final List<AntEdge> edgesToNotVisitedNodes)
