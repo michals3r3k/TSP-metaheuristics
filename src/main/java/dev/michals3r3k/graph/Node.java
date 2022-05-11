@@ -1,4 +1,4 @@
-package dev.michals3r3k;
+package dev.michals3r3k.graph;
 
 import java.util.Objects;
 

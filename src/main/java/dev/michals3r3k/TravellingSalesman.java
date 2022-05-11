@@ -1,5 +1,8 @@
 package dev.michals3r3k;
 
+import dev.michals3r3k.graph.Graph;
+import dev.michals3r3k.graph.Node;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -46,22 +49,6 @@ public class TravellingSalesman
             .filter(Predicate.not(visitedNodes::contains))
             .findFirst()
             .orElse(null);
-    }
-
-    public double getRouteDistance()
-    {
-        double[][] distanceMatrix = graph.getDistanceMatrix();
-        double distance = 0.0;
-        for(int i = 0; i < visitedNodes.size() - 1; ++i)
-        {
-            final Node node = visitedNodes.get(i);
-            final Node nextNode = visitedNodes.get(i + 1);
-            distance += distanceMatrix[node.getIndex()][nextNode.getIndex()];
-        }
-        final Node endingNode = visitedNodes.get(visitedNodes.size() - 1);
-        final Node startingNode = visitedNodes.get(0);
-        distance += distanceMatrix[endingNode.getIndex()][startingNode.getIndex()];
-        return distance;
     }
 
 }

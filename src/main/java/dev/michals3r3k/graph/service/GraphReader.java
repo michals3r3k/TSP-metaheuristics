@@ -1,4 +1,7 @@
-package dev.michals3r3k;
+package dev.michals3r3k.graph.service;
+
+import dev.michals3r3k.graph.Graph;
+import dev.michals3r3k.graph.Node;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -31,7 +34,7 @@ public class GraphReader
         return new Graph(nodeQuantity, nodes);
     }
 
-    GraphReader(String filename) throws FileNotFoundException
+    public GraphReader(String filename) throws FileNotFoundException
     {
         this.graph = readGraph(filename);
     }

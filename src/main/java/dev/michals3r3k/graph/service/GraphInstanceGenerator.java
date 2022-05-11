@@ -1,4 +1,7 @@
-package dev.michals3r3k;
+package dev.michals3r3k.graph.service;
+
+import dev.michals3r3k.graph.Graph;
+import dev.michals3r3k.graph.Node;
 
 import java.util.ArrayList;
 import java.util.List;
