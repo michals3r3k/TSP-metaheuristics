@@ -5,31 +5,80 @@ import com.google.common.collect.*;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class AntAlgorithm
 {
     private static final double STARING_EDGE_PHEROMONE = 1.0;
     private final ListMultimap<Node, AntEdge> edgeMap;
-    private List<Ant> ants;
+    private final Graph graph;
+    private final int antQuantity;
+    private final int iterations;
+    private final double alpha;
+    private final double randomProperty;
 
     public AntAlgorithm(
         final Graph graph,
-        final double pheromone,
         final int antQuantity,
-        final double evaporation)
+        final double evaporation,
+        int iterations,
+        double alpha,
+        double randomProperty)
     {
+        this.graph = graph;
+        this.antQuantity = antQuantity;
+        this.iterations = iterations;
+        this.alpha = alpha;
+        this.randomProperty = randomProperty;
         this.edgeMap = getEdgeMap(graph, evaporation);
-        initAnts(graph, antQuantity, pheromone);
     }
 
-    private void initAnts(final Graph graph, final int antQuantity, final double pheromone)
+    public List<AntEdge> runAlgorithm()
     {
-        this.ants = IntStream.range(0, antQuantity - 1)
-            .mapToObj(x -> new Ant(graph, edgeMap, pheromone))
-            .collect(Collectors.toList());
+        double tau0 = 1;
+        List<AntEdge> bestGlobalRoute = new ArrayList<>();
+        double globalBestDistance = Double.MAX_VALUE;
+        for(int i = 0; i < iterations; ++i)
+        {
+            AntAlgorithmIteration iteration = new AntAlgorithmIteration(
+                graph, antQuantity, edgeMap, i, tau0, randomProperty);
+            iteration.runIteration();
+            List<AntEdge> bestRoute = iteration.getBestRoute(globalBestDistance);
+            bestGlobalRoute = bestRoute;
+            globalBestDistance = bestRoute.stream()
+                .map(AntEdge::getDistance)
+                .reduce(0.0, Double::sum);
+
+            if(i == 0)
+            {
+                tau0 = 1 / ( graph.getNodeQuantity() * globalBestDistance );
+                for(AntEdge edge : edgeMap.values())
+                {
+                    edge.setPheromone(tau0);
+                }
+            }
+            for(AntEdge edge : edgeMap.values())
+            {
+                edge.setPheromone(edge.getPheromone() * alpha);
+            }
+            for(AntEdge edge : bestGlobalRoute)
+            {
+                AntEdge returning = getEdge(edge.getEndNode(), edge.getStartNode());
+                returning.setPheromone(returning.getPheromone() + (alpha / globalBestDistance));
+                edge.setPheromone(edge.getPheromone() + (alpha / globalBestDistance));
+            }
+        }
+        return bestGlobalRoute;
+    }
+
+    private AntEdge getEdge(final Node staringNode, final Node endingNode)
+    {
+        return edgeMap.get(staringNode).stream()
+            .filter(edge -> endingNode.equals(edge.getEndNode()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Cannot find edge from "
+                + staringNode.getId() + "to" + endingNode.getId()));
     }
 
     private static ListMultimap<Node, AntEdge> getEdgeMap(final Graph graph, final double evaporation)
@@ -40,13 +89,6 @@ public class AntAlgorithm
                 AntEdge::getStartNode,
                 Functions.identity(),
                 ArrayListMultimap::create));
-    }
-
-    public List<RouteWithDistance> runAlgorithm()
-    {
-        ants.forEach(Ant::run);
-        return ants.stream().map(Ant::getRouteWithDistance).collect(
-            Collectors.toList());
     }
 
 }

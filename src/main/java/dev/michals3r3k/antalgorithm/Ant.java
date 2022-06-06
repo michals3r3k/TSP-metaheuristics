@@ -15,37 +15,44 @@ public class Ant
 
     private final Graph graph;
     private final ListMultimap<Node, AntEdge> edgeMap;
+    private final double tau0;
 
     private final Set<Node> visited;
     private final List<AntEdge> visitedEdges;
-    private final double pheromone;
+    private final List<AntEdge> routeEdges;
     private boolean finishedTrace;
 
     public Ant(
         final Graph graph,
         final ListMultimap<Node, AntEdge> edgeMap,
-        final double pheromone)
+        double tau0)
     {
         this.graph = graph;
         this.edgeMap = edgeMap;
+        this.tau0 = tau0;
         this.visited = new HashSet<>();
         this.visitedEdges = new ArrayList<>();
-        this.pheromone = pheromone;
+        this.routeEdges = new ArrayList<>();
         this.finishedTrace = false;
     }
 
     public RouteWithDistance getRouteWithDistance()
     {
-        final List<Graph.Edge> edges = visitedEdges.stream().map(
+        final List<Graph.Edge> edges = routeEdges.stream().map(
             AntEdge::getEdge).collect(Collectors.toList());
         return new RouteWithDistance(getDistance(), edges);
     }
 
     public double getDistance()
     {
-        return visitedEdges.stream()
+        return routeEdges.stream()
             .map(AntEdge::getDistance)
             .reduce(0.0, Double::sum);
+    }
+
+    public List<AntEdge> getAntRoute()
+    {
+        return routeEdges;
     }
 
     public boolean isFinishedTrace()
@@ -53,46 +60,77 @@ public class Ant
         return finishedTrace;
     }
 
-    public void run()
+    public void run(int iterationNumber, double randomProperty)
     {
-        final Node firstNode = getFirstNode();
-        Node currentNode = firstNode;
+        final Node startingNode = getStartNode();
+        Node currentNode = startingNode;
+        visited.add(currentNode);
         while(graph.getNodeQuantity() != visited.size())
         {
-            final AntEdge edge = pickNextEdge(currentNode);
+            final AntEdge edge = pickNextEdge(currentNode, randomProperty);
             final Node nextNode = edge.getEndNode();
-            visited.add(nextNode);
-            visitedEdges.add(edge);
             currentNode = nextNode;
+            AntEdge returningEdge = getEdge(edge.getEndNode(), edge.getStartNode());
+
+            //to zadziała!
+            if(iterationNumber > 0)
+            {
+                edge.updatePheromone(tau0);
+                returningEdge.updatePheromone(tau0);
+            }
+
+            visited.add(nextNode);
+            routeEdges.add(edge);
+            visitedEdges.add(edge);
+            visitedEdges.add(returningEdge);
         }
-        visitedEdges.add(getEdge(currentNode, firstNode));
-        updateEdges();
+        AntEdge lastEdge = getEdge(currentNode, startingNode);
+        AntEdge returningLastEdge = getEdge(lastEdge.getEndNode(), lastEdge.getStartNode());
+        routeEdges.add(lastEdge);
+        visitedEdges.add(lastEdge);
+        visitedEdges.add(returningLastEdge);
         this.finishedTrace = true;
     }
 
-    private Node getFirstNode()
+    private Node getStartNode()
     {
-        final Node currentNode = graph.getNodes().iterator().next();
+        List<Node> nodes = new ArrayList<>(graph.getNodes());
+        Collections.shuffle(nodes);
+        final Node currentNode = nodes.iterator().next();
         visited.add(currentNode);
         return currentNode;
     }
 
-    private AntEdge pickNextEdge(final Node currentNode)
+    private AntEdge pickNextEdge(final Node currentNode, double randomProperty)
     {
-        final List<AntEdge> edgesToNotVisitedNodes =
-            getEdgesToNotVisitedNodes(currentNode);
-        final double pick = getPick(edgesToNotVisitedNodes);
-        return getChances(edgesToNotVisitedNodes).stream()
-            .filter(chance -> isContains(pick, chance))
-            .findFirst()
-            .map(Chance::getEdge)
-            .orElseThrow(() -> new IllegalStateException("Cannot find next node."));
+        List<AntEdge> edgesToNotVisitedNodes = new ArrayList<>();
+        getEdgesToNotVisitedNodes(currentNode).stream()
+            .sorted(Comparator.comparing(AntEdge::getAttraction).reversed())
+            .forEachOrdered(edgesToNotVisitedNodes::add);
+
+        AntEdge result = null;
+        do
+        {
+            result = edgesToNotVisitedNodes.get(0);
+            edgesToNotVisitedNodes.remove(0);
+        }
+        while(rand.nextDouble() > randomProperty && edgesToNotVisitedNodes.size() > 0);
+        return result;
+
+
+
+//        final double pick = getPick(edgesToNotVisitedNodes);
+//        return getChances(edgesToNotVisitedNodes).stream()
+//            .filter(chance -> isContains(pick, chance))
+//            .findFirst()
+//            .map(Chance::getEdge)
+//            .orElseThrow(() -> new IllegalStateException("Cannot find next node."));
     }
 
-    private boolean isContains(double pick, Chance chance)
-    {
-        return chance.contains(pick);
-    }
+//    private boolean isContains(double pick, Chance chance)
+//    {
+//        return chance.contains(pick);
+//    }
 
     private List<AntEdge> getEdgesToNotVisitedNodes(final Node currentNode)
     {
@@ -110,34 +148,34 @@ public class Ant
                 + staringNode.getId() + "to" + endingNode.getId()));
     }
 
-    private static double getPick(final List<AntEdge> edgesToNotVisitedNodes)
-    {
-        double wholeAttraction = edgesToNotVisitedNodes.stream()
-            .map(AntEdge::getAttraction)
-            .reduce(0.0, Double::sum);
-        return rand.nextDouble() * wholeAttraction;
-    }
-
-    private static List<Chance> getChances(
-        final List<AntEdge> edgesToNotVisitedNodes)
-    {
-        double chanceBefore = 0.0;
-        ImmutableList.Builder<Chance> builder = ImmutableList.builder();
-        for(final AntEdge edge : edgesToNotVisitedNodes)
-        {
-            final Range<Double> chanceRange = Range.closed(chanceBefore,
-                chanceBefore + edge.getAttraction());
-            builder.add(new Chance(chanceRange, edge));
-            chanceBefore = chanceRange.upperEndpoint();
-        }
-        return builder.build();
-    }
-
-    private void updateEdges()
-    {
-        edgeMap.values().forEach(AntEdge::evaporate);
-        final Double distance = this.getDistance();
-        visitedEdges.forEach(edge -> edge.spreadPheromone(distance, this.pheromone));
-    }
+//    private static double getPick(final List<AntEdge> edgesToNotVisitedNodes)
+//    {
+//        double wholeAttraction = edgesToNotVisitedNodes.stream()
+//            .map(AntEdge::getAttraction)
+//            .reduce(0.0, Double::sum);
+//        return rand.nextDouble() * wholeAttraction;
+//    }
+//
+//    private static List<Chance> getChances(
+//        final List<AntEdge> edgesToNotVisitedNodes)
+//    {
+//        double chanceBefore = 0.0;
+//        ImmutableList.Builder<Chance> builder = ImmutableList.builder();
+//        for(final AntEdge edge : edgesToNotVisitedNodes)
+//        {
+//            final Range<Double> chanceRange = Range.closed(chanceBefore,
+//                chanceBefore + edge.getAttraction());
+//            builder.add(new Chance(chanceRange, edge));
+//            chanceBefore = chanceRange.upperEndpoint();
+//        }
+//        return builder.build();
+//    }
+//
+//    private void updateEdges()
+//    {
+//        edgeMap.values().forEach(AntEdge::evaporate);
+//        final Double distance = this.getDistance();
+//        visitedEdges.forEach(edge -> edge.spreadPheromone(distance, this.pheromone));
+//    }
 
 }
