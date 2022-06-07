@@ -1,8 +1,6 @@
 package dev.michals3r3k.antalgorithm;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Range;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
 
@@ -15,11 +13,11 @@ public class Ant
 
     private final Graph graph;
     private final ListMultimap<Node, AntEdge> edgeMap;
-    private final double tau0;
-
     private final Set<Node> visited;
     private final List<AntEdge> visitedEdges;
     private final List<AntEdge> routeEdges;
+
+    private final double tau0;
     private boolean finishedTrace;
 
     public Ant(
@@ -36,13 +34,6 @@ public class Ant
         this.finishedTrace = false;
     }
 
-    public RouteWithDistance getRouteWithDistance()
-    {
-        final List<Graph.Edge> edges = routeEdges.stream().map(
-            AntEdge::getEdge).collect(Collectors.toList());
-        return new RouteWithDistance(getDistance(), edges);
-    }
-
     public double getDistance()
     {
         return routeEdges.stream()
@@ -50,7 +41,7 @@ public class Ant
             .reduce(0.0, Double::sum);
     }
 
-    public List<AntEdge> getAntRoute()
+    public List<AntEdge> getRoute()
     {
         return routeEdges;
     }
@@ -72,7 +63,7 @@ public class Ant
             currentNode = nextNode;
             AntEdge returningEdge = getEdge(edge.getEndNode(), edge.getStartNode());
 
-            //to zadziała!
+            // to zadziała!
             if(iterationNumber > 0)
             {
                 edge.updatePheromone(tau0);
@@ -104,33 +95,24 @@ public class Ant
     private AntEdge pickNextEdge(final Node currentNode, double randomProperty)
     {
         List<AntEdge> edgesToNotVisitedNodes = new ArrayList<>();
+
+        // sortowanie od najlepszej atrakcyjności
         getEdgesToNotVisitedNodes(currentNode).stream()
             .sorted(Comparator.comparing(AntEdge::getAttraction).reversed())
             .forEachOrdered(edgesToNotVisitedNodes::add);
 
-        AntEdge result = null;
+        // jeśli wylosowano poniżej randomProperty, to zwracamy pierwszy
+        // w przeciwnym wypadku zwracamy losowy.
+        AntEdge result;
         do
         {
             result = edgesToNotVisitedNodes.get(0);
             edgesToNotVisitedNodes.remove(0);
+            Collections.shuffle(edgesToNotVisitedNodes);
         }
         while(rand.nextDouble() > randomProperty && edgesToNotVisitedNodes.size() > 0);
         return result;
-
-
-
-//        final double pick = getPick(edgesToNotVisitedNodes);
-//        return getChances(edgesToNotVisitedNodes).stream()
-//            .filter(chance -> isContains(pick, chance))
-//            .findFirst()
-//            .map(Chance::getEdge)
-//            .orElseThrow(() -> new IllegalStateException("Cannot find next node."));
     }
-
-//    private boolean isContains(double pick, Chance chance)
-//    {
-//        return chance.contains(pick);
-//    }
 
     private List<AntEdge> getEdgesToNotVisitedNodes(final Node currentNode)
     {
@@ -147,35 +129,5 @@ public class Ant
             .orElseThrow(() -> new IllegalStateException("Cannot find edge from "
                 + staringNode.getId() + "to" + endingNode.getId()));
     }
-
-//    private static double getPick(final List<AntEdge> edgesToNotVisitedNodes)
-//    {
-//        double wholeAttraction = edgesToNotVisitedNodes.stream()
-//            .map(AntEdge::getAttraction)
-//            .reduce(0.0, Double::sum);
-//        return rand.nextDouble() * wholeAttraction;
-//    }
-//
-//    private static List<Chance> getChances(
-//        final List<AntEdge> edgesToNotVisitedNodes)
-//    {
-//        double chanceBefore = 0.0;
-//        ImmutableList.Builder<Chance> builder = ImmutableList.builder();
-//        for(final AntEdge edge : edgesToNotVisitedNodes)
-//        {
-//            final Range<Double> chanceRange = Range.closed(chanceBefore,
-//                chanceBefore + edge.getAttraction());
-//            builder.add(new Chance(chanceRange, edge));
-//            chanceBefore = chanceRange.upperEndpoint();
-//        }
-//        return builder.build();
-//    }
-//
-//    private void updateEdges()
-//    {
-//        edgeMap.values().forEach(AntEdge::evaporate);
-//        final Double distance = this.getDistance();
-//        visitedEdges.forEach(edge -> edge.spreadPheromone(distance, this.pheromone));
-//    }
 
 }

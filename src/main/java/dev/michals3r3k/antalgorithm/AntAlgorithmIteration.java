@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
+import dev.michals3r3k.utils.EdgeUtils;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
@@ -32,43 +33,166 @@ public class AntAlgorithmIteration
         this.ants = IntStream.range(0, antQuantity - 1)
             .mapToObj(x -> new Ant(graph, edgeMap, tau0))
             .collect(Collectors.toList());
-
     }
 
     void runIteration()
     {
         ants.forEach(ant -> ant.run(iterationNumber, randomProperty));
     }
-    List<AntEdge> getBestRoute(double globalBest)
+//    List<AntEdge> getBestRoute(double globalBest)
+//    {
+//        double bestDistance = globalBest;
+//        List<AntEdge> result = Collections.emptyList();
+//        for(Ant ant : ants)
+//        {
+//            double bestAntDistance = ant.getDistance();
+//            List<AntEdge> antRoute = ant.getRoute();
+//            result = antRoute;
+//            for(int i = 0; i < 10; i++)
+//            {
+//                List<AntEdge> firstBetter = findFirstBetter(edgeMap,
+//                    bestAntDistance, antRoute);
+//                double betterDistance = getFullDistance(firstBetter);
+//                if(betterDistance < bestDistance)
+//                {
+//                    bestDistance = betterDistance;
+//                    result = firstBetter;
+//                }
+//                else
+//                {
+//                    break;
+//                }
+//            }
+//        }
+//        return result;
+//    }
+
+    void putBestResultWithOpt(AntAlgorithmResult result)
     {
-        double bestDistance = globalBest;
-        List<AntEdge> result = Collections.emptyList();
         for(Ant ant : ants)
         {
-            double bestAntDistance = ant.getDistance();
-            List<AntEdge> antRoute = ant.getAntRoute();
-            result = antRoute;
-            for(int i = 0; i < 10; i++)
+            List<AntEdge> antRoute = ant.getRoute();
+            if(result.isEmpty())
             {
-                List<AntEdge> firstBetter = findFirstBetter(edgeMap,
-                    bestAntDistance, antRoute);
-                double betterDistance = getFullDistance(firstBetter);
-                if(betterDistance < bestDistance)
-                {
-                    bestDistance = betterDistance;
-                    result = firstBetter;
-                }
-                else
+                result.update(antRoute);
+            }
+            for(int i = 0; i < 1; i++)
+            {
+                if(!getOpt2(result))
                 {
                     break;
                 }
             }
         }
+    }
+
+    private boolean getOpt2(AntAlgorithmResult result)
+    {
+        List<Node> nodesOnRoad = EdgeUtils.getNodesOnRoad(result.getEdges());
+        for(int start = 0; start < nodesOnRoad.size() - 2; ++start)
+        {
+            for(int end = start + 1; end < nodesOnRoad.size() - 1; ++end)
+            {
+                List<AntEdge> edges = getReversedFrom(nodesOnRoad, start, end);
+                if(result.update(edges))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public void putBestResultWithoutOpt(AntAlgorithmResult result)
+    {
+        ants.stream()
+            .map(Ant::getRoute)
+            .forEachOrdered(result::update);
+    }
+
+    private static class Opt2
+    {
+        private final boolean poprawa;
+        private final double distance;
+        private final List<AntEdge> edges;
+
+        private Opt2(boolean poprawa, double distance, List<AntEdge> edges)
+        {
+            this.poprawa = poprawa;
+            this.distance = distance;
+            this.edges = edges;
+        }
+    }
+
+    private List<AntEdge> getReversedFrom(List<Node> nodesOnRoad, int start, int end)
+    {
+        ImmutableList.Builder<Node> builder = ImmutableList.builder();
+        List<Node> nodesPart = new ArrayList<>(nodesOnRoad.subList(start, end));
+        Collections.reverse(nodesPart);
+        builder.addAll(new ArrayList<>(nodesOnRoad.subList(0, start)));
+        builder.addAll(nodesPart);
+        builder.addAll(new ArrayList<>(nodesOnRoad.subList(end, nodesOnRoad.size())));
+        List<Node> build = builder.build();
+
+        return getEdges(build);
+    }
+
+    private List<AntEdge> getEdges(List<Node> nodes)
+    {
+        List<AntEdge> collect = IntStream.range(0, nodes.size() - 1)
+            .mapToObj(i -> getAntEdge(nodes, i))
+            .collect(Collectors.toList());
+        Node first = nodes.get(0);
+        Node last = nodes.get(nodes.size() - 1);
+        List<AntEdge> collect1 = Stream.concat(
+                collect.stream(),
+                Stream.of(getEdge(last, first)))
+            .collect(Collectors.toList());
+        return collect1;
+    }
+
+    private AntEdge getEdge(final Node staringNode, final Node endingNode)
+    {
+        return edgeMap.get(staringNode).stream()
+            .filter(edge -> endingNode.equals(edge.getEndNode()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Cannot find edge from "
+                + staringNode.getId() + "to" + endingNode.getId()));
+    }
+
+    private AntEdge getAntEdge(List<Node> better, int i)
+    {
+        Node starting = better.get(i);
+        Node ending = better.get(i + 1);
+        AntEdge edges = edgeMap.get(starting).stream()
+            .filter(edge -> ending.equals(edge.getEndNode()))
+            .findFirst()
+            .orElseThrow(
+                () -> new IllegalStateException("Error"));
+        return edges;
+    }
+
+
+
+    List<AntEdge> getBestRoute()
+    {
+        double distance = Double.MAX_VALUE;
+        List<AntEdge> result = Collections.emptyList();
+        for(Ant ant : ants)
+        {
+            double distanceNew = ant.getRoute().stream().map(
+                AntEdge::getDistance).reduce(0.0, Double::sum);
+            if(distanceNew < distance)
+            {
+                distance = distanceNew;
+                result = ant.getRoute();
+            }
+        }
         return result;
     }
 
-    private List<AntEdge> findFirstBetter(ListMultimap<Node, AntEdge> edgeMap,
-        double bestAntDistance, List<AntEdge> antRoute)
+
+    private List<AntEdge> findFirstBetter(double bestAntDistance, List<AntEdge> antRoute)
     {
         List<Node> nodesOnRoad = antRoute.stream()
             .map(AntEdge::getStartNode)
@@ -133,7 +257,7 @@ public class AntAlgorithmIteration
     private double opt2(Ant ant)
     {
         double bestDistance = ant.getDistance();
-        List<AntEdge> antRoute = ant.getAntRoute();
+        List<AntEdge> antRoute = ant.getRoute();
         int i = 0;
         boolean poprawa = true;
         while(i < 10 && poprawa)
@@ -146,7 +270,7 @@ public class AntAlgorithmIteration
     private List<AntEdge> getBetter(Ant ant)
     {
         double bestDistance = ant.getDistance();
-        List<AntEdge> antRoute = ant.getAntRoute();
+        List<AntEdge> antRoute = ant.getRoute();
         start:
         for(int start = 0; start < antRoute.size() - 2; ++start)
         {

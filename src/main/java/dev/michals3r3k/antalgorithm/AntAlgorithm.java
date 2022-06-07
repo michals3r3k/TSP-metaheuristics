@@ -34,7 +34,38 @@ public class AntAlgorithm
         this.edgeMap = getEdgeMap(graph, evaporation);
     }
 
-    public List<AntEdge> runAlgorithm()
+    public AntAlgorithmResult runAlgorithm()
+    {
+        double tau0 = 1;
+        AntAlgorithmResult result = new AntAlgorithmResult();
+        for(int i = 0; i < iterations; ++i)
+        {
+            AntAlgorithmIteration iteration = new AntAlgorithmIteration(
+                graph, antQuantity, edgeMap, i, tau0, randomProperty);
+            iteration.runIteration();
+            iteration.putBestResultWithoutOpt(result);
+            if(i == 0)
+            {
+                tau0 = 1 / ( graph.getNodeQuantity() * result.getDistance() );
+                for(AntEdge edge : edgeMap.values())
+                {
+                    edge.setPheromone(tau0);
+                }
+            }
+            for(AntEdge edge : edgeMap.values())
+            {
+                edge.setPheromone(edge.getPheromone() * alpha);
+            }
+            for(AntEdge edge : result.getEdges())
+            {
+                AntEdge returning = getEdge(edge.getEndNode(), edge.getStartNode());
+                returning.setPheromone(returning.getPheromone() + (alpha / result.getDistance()));
+                edge.setPheromone(edge.getPheromone() + (alpha / result.getDistance()));
+            }
+        }
+        return result;
+    }
+    public List<AntEdge> runAlgorithm1()
     {
         double tau0 = 1;
         List<AntEdge> bestGlobalRoute = new ArrayList<>();
@@ -44,11 +75,16 @@ public class AntAlgorithm
             AntAlgorithmIteration iteration = new AntAlgorithmIteration(
                 graph, antQuantity, edgeMap, i, tau0, randomProperty);
             iteration.runIteration();
-            List<AntEdge> bestRoute = iteration.getBestRoute(globalBestDistance);
+//            List<AntEdge> bestRoute = iteration.getBestRoute(globalBestDistance);
+            List<AntEdge> bestRoute = iteration.getBestRoute();
             bestGlobalRoute = bestRoute;
-            globalBestDistance = bestRoute.stream()
+            double distance = bestRoute.stream()
                 .map(AntEdge::getDistance)
                 .reduce(0.0, Double::sum);
+            if(distance < globalBestDistance)
+            {
+                globalBestDistance = distance;
+            }
 
             if(i == 0)
             {
