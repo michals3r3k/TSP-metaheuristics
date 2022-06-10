@@ -7,40 +7,48 @@ import java.util.List;
 
 public class AntAlgorithmResult
 {
-    private List<AntEdge> edges;
-    private double distance;
+    private List<AntEdge> bestRoute;
+    private double bestDistance;
+    private int timesOfGotBetter;
 
     public AntAlgorithmResult()
     {
-        this.edges = Collections.emptyList();
-        this.distance = Double.MAX_VALUE;
+        this.timesOfGotBetter=0;
+        this.bestRoute = Collections.emptyList();
+        this.bestDistance = Double.MAX_VALUE;
+
     }
 
-    boolean update(List<AntEdge> edges)
+    boolean update(List<AntEdge> newRoute)
     {
-        double distance = EdgeUtils.getDistance(edges);
-        if(distance < this.distance)
+        double newRouteDistance = EdgeUtils.getDistance(newRoute);
+        if(newRouteDistance < this.bestDistance)
         {
-            this.distance = distance;
-            this.edges = edges;
+            this.bestDistance = newRouteDistance;
+            this.bestRoute = newRoute;
+            timesOfGotBetter++;
             return true;
         }
         return false;
     }
 
-    public double getDistance()
+    public double getBestDistance()
     {
-        return distance;
+        return bestDistance;
     }
 
-    public List<AntEdge> getEdges()
+    public List<AntEdge> getBestRoute()
     {
-        return edges;
+        return bestRoute;
     }
 
     public boolean isEmpty()
     {
-        return edges.isEmpty();
+        return bestRoute.isEmpty();
     }
 
+    public int getTimesOfGotBetter()
+    {
+        return timesOfGotBetter;
+    }
 }

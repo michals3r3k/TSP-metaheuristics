@@ -6,10 +6,10 @@ import dev.michals3r3k.antalgorithm.AntEdge;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
 import dev.michals3r3k.graph.service.GraphReader;
+import org.apache.poi.ss.usermodel.*;
 
 import java.io.FileNotFoundException;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,23 +26,24 @@ public class Main
             System.out.println(filename);
             AntAlgorithm antAlgorithm = new AntAlgorithm(
                 graph,
-                1000,
-                0.1,
-                5,
-                0.9,
-                0.9);
+                600,
+                0.2,
+                3,
+                0.6,
+                0.98);
             AntAlgorithmResult result = antAlgorithm.runAlgorithm();
-            List<Node> route = getRoute(result.getEdges());
+            List<Node> route = getRoute(result.getBestRoute());
             String routeStr = route.stream().map(Node::getId).map(
                     Objects::toString).collect(
                     Collectors.joining("->", "\n", ""));
-                System.out.println(routeStr);
-                System.out.println("Distance: " + result.getDistance() + "\n");
+                //System.out.println(routeStr);
+                System.out.println("Distance: " + result.getBestDistance());
+            System.out.println("Result gotBetter " + result.getTimesOfGotBetter() + " times");
 
             long end = System.currentTimeMillis();
             double minuty = Math.floor(((end-start) / 1000.0)/60);
             double sekundy = ((end-start) / 1000) % 60;
-            System.out.println(String.format("Time: %s min, %s sec", minuty, sekundy));
+            System.out.println(String.format("Time: %s min, %s sec\n", minuty, sekundy));
         }
 
     }

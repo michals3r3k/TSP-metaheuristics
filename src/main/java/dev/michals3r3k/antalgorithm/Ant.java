@@ -51,14 +51,14 @@ public class Ant
         return finishedTrace;
     }
 
-    public void run(int iterationNumber, double randomProperty)
+    public boolean run(int iterationNumber, double randomProperty, boolean firstAnt, AlgorithmTimer timer)
     {
-        final Node startingNode = getStartNode();
+        final Node startingNode = getStartNode(firstAnt);
         Node currentNode = startingNode;
         visited.add(currentNode);
         while(graph.getNodeQuantity() != visited.size())
         {
-            final AntEdge edge = pickNextEdge(currentNode, randomProperty);
+            final AntEdge edge = pickNextEdge(currentNode, randomProperty, firstAnt);
             final Node nextNode = edge.getEndNode();
             currentNode = nextNode;
             AntEdge returningEdge = getEdge(edge.getEndNode(), edge.getStartNode());
@@ -74,6 +74,10 @@ public class Ant
             routeEdges.add(edge);
             visitedEdges.add(edge);
             visitedEdges.add(returningEdge);
+            if(timer.isTimeEnd())
+            {
+                return false;
+            }
         }
         AntEdge lastEdge = getEdge(currentNode, startingNode);
         AntEdge returningLastEdge = getEdge(lastEdge.getEndNode(), lastEdge.getStartNode());
@@ -81,10 +85,18 @@ public class Ant
         visitedEdges.add(lastEdge);
         visitedEdges.add(returningLastEdge);
         this.finishedTrace = true;
+        return true;
     }
 
-    private Node getStartNode()
+    private Node getStartNode(boolean firstAnt)
     {
+        if(firstAnt)
+        {
+            return graph.getNodes().stream()
+                .filter(node -> node.getIndex() == 0)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Cannot find node with index 0"));
+        }
         List<Node> nodes = new ArrayList<>(graph.getNodes());
         Collections.shuffle(nodes);
         final Node currentNode = nodes.iterator().next();
@@ -92,7 +104,8 @@ public class Ant
         return currentNode;
     }
 
-    private AntEdge pickNextEdge(final Node currentNode, double randomProperty)
+    private AntEdge pickNextEdge(final Node currentNode, double randomProperty,
+        boolean firstAnt)
     {
         List<AntEdge> edgesToNotVisitedNodes = new ArrayList<>();
 
@@ -101,6 +114,11 @@ public class Ant
             .sorted(Comparator.comparing(AntEdge::getAttraction).reversed())
             .forEachOrdered(edgesToNotVisitedNodes::add);
 
+        if(firstAnt)
+        {
+            return edgesToNotVisitedNodes.get(0);
+        }
+
         // jeśli wylosowano poniżej randomProperty, to zwracamy pierwszy
         // w przeciwnym wypadku zwracamy losowy.
         AntEdge result;
@@ -108,7 +126,6 @@ public class Ant
         {
             result = edgesToNotVisitedNodes.get(0);
             edgesToNotVisitedNodes.remove(0);
-            Collections.shuffle(edgesToNotVisitedNodes);
         }
         while(rand.nextDouble() > randomProperty && edgesToNotVisitedNodes.size() > 0);
         return result;

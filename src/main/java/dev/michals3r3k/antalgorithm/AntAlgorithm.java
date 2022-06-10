@@ -5,12 +5,13 @@ import com.google.common.collect.*;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class AntAlgorithm
 {
+    private static final int MAX_TIME_OF_WORK = 5;
     private static final double STARING_EDGE_PHEROMONE = 1.0;
+
     private final ListMultimap<Node, AntEdge> edgeMap;
     private final Graph graph;
     private final int antQuantity;
@@ -38,74 +39,53 @@ public class AntAlgorithm
     {
         double tau0 = 1;
         AntAlgorithmResult result = new AntAlgorithmResult();
+        AlgorithmTimer timer = new AlgorithmTimer(MAX_TIME_OF_WORK, 0);
         for(int i = 0; i < iterations; ++i)
         {
             AntAlgorithmIteration iteration = new AntAlgorithmIteration(
                 graph, antQuantity, edgeMap, i, tau0, randomProperty);
-            iteration.runIteration();
-            iteration.putBestResultWithoutOpt(result);
-            if(i == 0)
+
+            if(!iteration.runIteration(timer, result))
             {
-                tau0 = 1 / ( graph.getNodeQuantity() * result.getDistance() );
-                for(AntEdge edge : edgeMap.values())
-                {
-                    edge.setPheromone(tau0);
-                }
+                return result;
             }
-            for(AntEdge edge : edgeMap.values())
+
+            iteration.putBestResultWithOpt(result, timer);
+
+            if(timer.isTimeEnd())
             {
-                edge.setPheromone(edge.getPheromone() * alpha);
+                return result;
             }
-            for(AntEdge edge : result.getEdges())
-            {
-                AntEdge returning = getEdge(edge.getEndNode(), edge.getStartNode());
-                returning.setPheromone(returning.getPheromone() + (alpha / result.getDistance()));
-                edge.setPheromone(edge.getPheromone() + (alpha / result.getDistance()));
-            }
+            tau0 = 1 / (graph.getNodeQuantity() * result.getBestDistance());
+            updateEdges(result, tau0, i == 0);
         }
         return result;
     }
-    public List<AntEdge> runAlgorithm1()
-    {
-        double tau0 = 1;
-        List<AntEdge> bestGlobalRoute = new ArrayList<>();
-        double globalBestDistance = Double.MAX_VALUE;
-        for(int i = 0; i < iterations; ++i)
-        {
-            AntAlgorithmIteration iteration = new AntAlgorithmIteration(
-                graph, antQuantity, edgeMap, i, tau0, randomProperty);
-            iteration.runIteration();
-//            List<AntEdge> bestRoute = iteration.getBestRoute(globalBestDistance);
-            List<AntEdge> bestRoute = iteration.getBestRoute();
-            bestGlobalRoute = bestRoute;
-            double distance = bestRoute.stream()
-                .map(AntEdge::getDistance)
-                .reduce(0.0, Double::sum);
-            if(distance < globalBestDistance)
-            {
-                globalBestDistance = distance;
-            }
 
-            if(i == 0)
+    private void updateEdges(AntAlgorithmResult result, double tau0, boolean firstIteration)
+    {
+        double pheromoneToAdd = alpha / result.getBestDistance();
+        for(AntEdge edge : edgeMap.values())
+        {
+            if(firstIteration)
             {
-                tau0 = 1 / ( graph.getNodeQuantity() * globalBestDistance );
-                for(AntEdge edge : edgeMap.values())
-                {
-                    edge.setPheromone(tau0);
-                }
+                edge.setPheromone(tau0);
             }
-            for(AntEdge edge : edgeMap.values())
-            {
-                edge.setPheromone(edge.getPheromone() * alpha);
-            }
-            for(AntEdge edge : bestGlobalRoute)
+            edge.setPheromone(edge.getPheromone() * (1 - alpha));
+            if(isInBestRoute(edge, result.getBestRoute()))
             {
                 AntEdge returning = getEdge(edge.getEndNode(), edge.getStartNode());
-                returning.setPheromone(returning.getPheromone() + (alpha / globalBestDistance));
-                edge.setPheromone(edge.getPheromone() + (alpha / globalBestDistance));
+                returning.setPheromone(returning.getPheromone() + pheromoneToAdd);
+                edge.setPheromone(edge.getPheromone() + pheromoneToAdd);
             }
         }
-        return bestGlobalRoute;
+    }
+
+    private boolean isInBestRoute(AntEdge edge, List<AntEdge> bestRoute)
+    {
+        return bestRoute.stream()
+            .anyMatch(routeEdge -> routeEdge.getStartNode().equals(edge.getStartNode())
+                && routeEdge.getEndNode().equals(edge.getEndNode()));
     }
 
     private AntEdge getEdge(final Node staringNode, final Node endingNode)
