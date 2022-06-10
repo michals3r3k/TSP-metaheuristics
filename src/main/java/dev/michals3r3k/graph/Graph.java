@@ -41,7 +41,7 @@ public class Graph
 
     public Optional<Edge> getEdge(Node startNode, Node endNode)
     {
-        return getEdges(startNode).stream().filter(endNode::equals).findFirst();
+        return getEdges(startNode).stream().filter(edge -> endNode.equals(edge.getEndNode())).findFirst();
     }
 
     public List<Edge> getEdges(Node node)

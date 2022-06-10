@@ -1,9 +1,11 @@
 package dev.michals3r3k;
 
+import com.google.common.collect.ImmutableList;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -18,16 +20,26 @@ public class TravellingSalesman
         this.visitedNodes = new ArrayList<>();
     }
 
-    public List<Node> getGreedyTspRoute(Node stringNode)
+    public List<Graph.Edge> getGreedyTspRoute()
     {
-        this.visitedNodes = new ArrayList<>();
-        Node currentNode = stringNode;
+        Node startingNode = graph.getNodes().get(0);
+        Node currentNode = startingNode;
         while(!isAllVisited())
         {
             visitedNodes.add(currentNode);
             currentNode = getNextNotVisitedNode(currentNode);
         }
-        return visitedNodes;
+        visitedNodes.add(startingNode);
+        ImmutableList.Builder<Graph.Edge> builder = ImmutableList.builder();
+        for(int i = 0; i < visitedNodes.size() - 1; i++)
+        {
+            Node node = visitedNodes.get(i);
+            Node nextNode = visitedNodes.get(i + 1);
+            Graph.Edge tsp_error = graph.getEdge(node, nextNode)
+                .orElseThrow(() -> new IllegalStateException("TSP Error"));
+            builder.add(tsp_error);
+        }
+        return builder.build();
     }
 
     private boolean isAllVisited()

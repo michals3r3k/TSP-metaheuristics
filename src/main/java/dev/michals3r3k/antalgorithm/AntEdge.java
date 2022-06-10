@@ -42,7 +42,12 @@ public class AntEdge
 
     public void evaporate()
     {
-        this.pheromone *= (100 - this.evaporation) / 100;
+        this.pheromone *= (1 - this.evaporation);
+    }
+
+    public void setPheromone(double pheromone)
+    {
+        this.pheromone = pheromone;
     }
 
     public void spreadPheromone(final double distance, final double antPheromone)
@@ -52,10 +57,18 @@ public class AntEdge
 
     public double getAttraction()
     {
-        double alpha = 1;
-        double beta = 1;
-        return Math.pow(this.getDistance(), alpha)
-            * Math.pow(this.pheromone, beta);
+        return pheromone / edge.getDistance();
+    }
+
+    public void updatePheromone(double tau0)
+    {
+        evaporate();
+        this.pheromone += evaporation * tau0;
+    }
+
+    public double getPheromone()
+    {
+        return pheromone;
     }
 
 }

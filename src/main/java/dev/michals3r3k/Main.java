@@ -1,106 +1,72 @@
 package dev.michals3r3k;
 
 import dev.michals3r3k.antalgorithm.AntAlgorithm;
-import dev.michals3r3k.antalgorithm.RouteWithDistance;
+import dev.michals3r3k.antalgorithm.AntAlgorithmResult;
+import dev.michals3r3k.antalgorithm.AntEdge;
 import dev.michals3r3k.graph.Graph;
 import dev.michals3r3k.graph.Node;
 import dev.michals3r3k.graph.service.GraphReader;
 
 import java.io.FileNotFoundException;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Main
 {
     public static void main(String[] args) throws FileNotFoundException
     {
-        List<String> filenames = Arrays.asList("berlin52.txt");
-//        List<String> filenames = Arrays.asList("berlin52.txt", "bier127.txt",
-//            "tsp250.txt", "tsp500.txt", "tsp1000.txt");
+        List<String> filenames = Arrays.asList("berlin52.txt", "bier127.txt",
+            "tsp250.txt", "tsp500.txt", "tsp1000.txt");
         for(String filename : filenames)
         {
-//            printDistanceAndRoute(filename);
+            long start = System.currentTimeMillis();
             Graph graph = new GraphReader(filename).getGraph();
-            AntAlgorithm antAlgorithm = new AntAlgorithm(graph, 40.0, 30, 30.0);
-            List<RouteWithDistance> routeWithDistances = antAlgorithm.runAlgorithm().stream()
-                .sorted(Comparator.comparing(RouteWithDistance::getDistance))
-                .collect(Collectors.toList());
-            for(RouteWithDistance route : routeWithDistances)
-            {
-                String routeStr = route.getRoute().stream().map(Node::getId).map(
-                    Objects::toString).collect(
-                    Collectors.joining("->", "\n", ""));
-                System.out.println(routeStr);
-                System.out.println("Distance: " + route.getDistance() + "\n");
-            }
+            TravellingSalesman travellingSalesman = new TravellingSalesman(graph);
+            double greedyDistance = travellingSalesman.getGreedyTspRoute().stream()
+                .map(Graph.Edge::getDistance)
+                .reduce(0.0, Double::sum);
 
+            System.out.println(filename);
+            System.out.println("Greedy algorithm distance:" + greedyDistance);
+            AntAlgorithm antAlgorithm = new AntAlgorithm(
+                graph,
+                600,
+                0.2,
+                3,
+                0.6,
+                0.98);
+            AntAlgorithmResult result = antAlgorithm.runAlgorithm();
+            //System.out.println(getRouteString(getRoute(result.getBestRoute())));
+            System.out.println("Distance: " + result.getBestDistance());
+            System.out.println("Result gotBetter " + result.getTimesOfGotBetter() + " times");
+
+            long end = System.currentTimeMillis();
+            double minutes = Math.floor(((end-start) / 1000.0)/60);
+            double seconds = ((end-start) / 1000) % 60;
+            System.out.println(String.format("Time: %s min, %s sec\n", minutes, seconds));
         }
 
     }
 
-    private static List<Node> getGreedyTspRoute(final Graph graph)
+    private static String getRouteString(List<Node> route)
     {
-        List<Node> visited = new ArrayList<>();
+        return route.stream().map(Node::getId).map(
+            Objects::toString).collect(
+            Collectors.joining("->", "", ""));
+    }
 
-        Node currentNode = graph.getNodes().get(0);
-        while(!isContainsAllNodes(graph, visited))
+    private static List<Node> getRoute(final List<AntEdge> edges)
+    {
+        if(edges.isEmpty())
         {
-            visited.add(currentNode);
-            currentNode = getNextNotVisitedNode(graph, visited, currentNode);
+            return Collections.emptyList();
         }
-        return visited;
-    }
-
-    private static void printNodes(final Graph graph)
-    {
-        for(Node node : graph.getNodes())
-        {
-            System.out.println(
-                node.getId() + " " + node.getX() + " " + node.getY());
-        }
-    }
-
-    private static boolean isContainsAllNodes(final Graph graph,
-        final List<Node> visited)
-    {
-        for(Node node : graph.getNodes())
-        {
-            if(!visited.contains(node))
-            {
-                return false;
-            }
-
-        }
-        return true;
-    }
-
-    private static Node getNextNotVisitedNode(final Graph graph,
-        final List<Node> visited, Node currentNode)
-    {
-        return graph.getNeighbours(currentNode).stream().filter(
-            Predicate.not(visited::contains)).findFirst().orElse(null);
-    }
-
-    private static void printPath(final List<Node> visited)
-    {
-        String path = visited.stream().map(
-            node -> Integer.toString(node.getId())).collect(
-            Collectors.joining(" -> "));
-        System.out.println(path);
-    }
-
-    private static void printEdges(final double[][] graphDistances)
-    {
-        for(int i = 0; i < graphDistances.length; ++i)
-        {
-            for(int j = 0; j < graphDistances[i].length; ++j)
-            {
-                System.out.println(
-                    i + " - " + j + " -> " + graphDistances[i][j]);
-                System.out.println();
-            }
-        }
+        final AntEdge firstEdge = edges.iterator().next();
+        final List<Node> nodes = edges.stream().map(AntEdge::getEndNode).collect(
+            Collectors.toList());
+        return Stream.concat(Stream.of(firstEdge.getStartNode()), nodes.stream())
+            .collect(Collectors.toList());
     }
 
 }
